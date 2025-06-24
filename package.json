@@ -1,0 +1,16 @@
+{
+  "name": "nse-proxy",
+  "version": "1.0.0",
+  "description": "Live NSE stock dashboard with login system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.0",
+    "express-session": "^1.17.3"
+  }
+}
