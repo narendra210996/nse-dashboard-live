@@ -36,9 +36,60 @@
     tr:nth-child(even) { background: #f9fafb; }
     .recommendation-row { background: #ecfdf5; display: none; }
     .container { max-width: 1200px; margin: auto; padding: 1rem; }
+
+    /* Loader styles */
+    #loader {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loader-box {
+      text-align: center;
+      color: #166534;
+      font-family: sans-serif;
+    }
+
+    .loader-box p {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      animation: pulse 1.5s infinite;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 5px solid #cbd5e1;
+      border-top: 5px solid #15803d;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
+  <!-- Loader -->
+  <div id="loader">
+    <div class="loader-box">
+      <div class="spinner"></div>
+      <p>Fetching live stock data... please wait</p>
+    </div>
+  </div>
+
   <header>
     US Market Dashboard
     <button class="logout" onclick="window.location.href='/logout'">Logout</button>
@@ -130,12 +181,22 @@
         tbody.appendChild(row);
         tbody.appendChild(recoRow);
       });
+
+      // ✅ Hide loader after data loads
+      document.getElementById('loader').style.display = 'none';
     }
 
     (async () => {
       await loadStaticData();
       await fetchLiveQuotes();
-      setInterval(fetchLiveQuotes, 120000);
+
+      // ⏱ Auto-dismiss loader after 30 seconds in case of delay
+      setTimeout(() => {
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+      }, 30000);
+
+      setInterval(fetchLiveQuotes, 120000); // every 2 min
     })();
   </script>
 </body>
