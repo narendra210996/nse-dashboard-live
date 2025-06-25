@@ -112,6 +112,16 @@ app.get('/api/nifty', async (req, res) => {
 });
 
 // ✅ Start server on dynamic port
+// 🔐 TEMPORARY: View registered usernames
+app.get('/admin-users', (req, res) => {
+  const users = loadUsers();
+  const usernames = users.map(u => u.username);
+  res.send(`
+    <h2>👥 Total Registered Users: ${users.length}</h2>
+    <ul>${usernames.map(name => `<li>${name}</li>`).join('')}</ul>
+    <p style="color:red;">(Don't forget to remove this route after checking)</p>
+  `);
+});
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
