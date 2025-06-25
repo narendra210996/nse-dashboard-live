@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NSE Live Dashboard</title>
+  <title>US Market Dashboard</title>
   <style>
     body { font-family: sans-serif; margin: 0; background: #f3f4f6; color: #111; }
     header { background: #15803d; color: #fff; padding: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; }
@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <header>NSE Dashboard</header>
+  <header>US Market Dashboard</header>
   <div class="container">
     <table>
       <thead>
@@ -34,7 +34,6 @@
       <tbody id="stock-body"></tbody>
     </table>
   </div>
-
   <script>
     let cachedMetrics = {};
     let cachedRecos = {};
@@ -66,9 +65,9 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${symbol}</td>
-          <td>${stock.lastPrice != null ? `₹${stock.lastPrice.toFixed(2)}` : '-'}</td>
+          <td>${stock.lastPrice != null ? `\u20B9${stock.lastPrice.toFixed(2)}` : '-'}</td>
           <td>${stock.percentChange != null ? `${stock.percentChange.toFixed(2)}%` : '-'}</td>
-          <td>${stock.previousClose != null ? `₹${stock.previousClose.toFixed(2)}` : '-'}</td>
+          <td>${stock.previousClose != null ? `\u20B9${stock.previousClose.toFixed(2)}` : '-'}</td>
           <td>${metric.weekHigh ?? '-'}</td>
           <td>${metric.weekLow ?? '-'}</td>
           <td>${metric.peRatio != null ? metric.peRatio.toFixed(2) : '-'}</td>
