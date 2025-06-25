@@ -9,7 +9,7 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const USERS_FILE = './users.json';
-const FINNHUB_TOKEN = 'd1e3gshr01qlt46scn30d1e3gshr01qlt46scn3g'; // your API key
+const FINNHUB_TOKEN = 'd1e3gshr01qlt46scn30d1e3gshr01qlt46scn3g';
 
 const US_STOCKS = [
   "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "NVDA", "BRK.B", "UNH", "JPM",
@@ -19,7 +19,6 @@ const US_STOCKS = [
   "WMT", "QCOM", "BMY", "MDT", "AMGN", "UPS", "MS", "PM", "AMAT", "SCHW"
 ];
 
-// Middleware
 app.use(cors());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
@@ -29,7 +28,6 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// File-based user storage
 function loadUsers() {
   if (!fs.existsSync(USERS_FILE)) return [];
   return JSON.parse(fs.readFileSync(USERS_FILE));
@@ -38,7 +36,6 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// Routes
 app.get('/', (req, res) => res.redirect('/login'));
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'public', 'register.html')));
@@ -75,7 +72,6 @@ app.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/login'));
 });
 
-// Caching
 let cachedMetrics = {};
 let cachedRecos = {};
 let cachedQuotes = {};
@@ -89,7 +85,7 @@ function isMarketOpen() {
   const hour = estNow.getHours();
   const minute = estNow.getMinutes();
   const totalMinutes = hour * 60 + minute;
-  return day >= 1 && day <= 5 && totalMinutes >= 570 && totalMinutes <= 960; // 9:30–16:00 EST
+  return day >= 1 && day <= 5 && totalMinutes >= 570 && totalMinutes <= 960;
 }
 
 function retryLater(fn, label) {
@@ -97,7 +93,6 @@ function retryLater(fn, label) {
   setTimeout(() => fn().catch(() => retryLater(fn, label)), 10 * 60 * 1000);
 }
 
-// Daily data
 async function refreshMetrics() {
   if (lastMetricRefresh && new Date().toDateString() === lastMetricRefresh.toDateString()) return;
   console.log('📊 Refreshing metrics...');
@@ -147,7 +142,6 @@ async function refreshRecommendations() {
   }
 }
 
-// Routes to fetch data
 app.get('/api/metrics', async (req, res) => {
   await refreshMetrics();
   res.json(Object.values(cachedMetrics));
@@ -157,6 +151,10 @@ app.get('/api/recommendations', async (req, res) => {
   await refreshRecommendations();
   res.json(Object.values(cachedRecos));
 });
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 app.get('/api/quote', async (req, res) => {
   const isMarket = isMarketOpen();
@@ -171,6 +169,7 @@ app.get('/api/quote', async (req, res) => {
         });
         quote = data;
         if (!isMarket) cachedQuotes[symbol] = quote;
+        await delay(500); // throttle to avoid 429
       } else {
         quote = cachedQuotes[symbol];
       }
@@ -191,7 +190,6 @@ app.get('/api/quote', async (req, res) => {
   res.json(results);
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
