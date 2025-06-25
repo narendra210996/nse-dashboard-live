@@ -3,91 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nifty 50 Dashboard</title>
+  <title>NSE Live Dashboard</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      padding: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: #15803d;
-      color: white;
-    }
-    .expand-btn {
-      background-color: #10b981;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .recommendation-row {
-      background-color: #ecfdf5;
-      display: none;
-    }
+    body { font-family: sans-serif; margin: 0; background: #f3f4f6; color: #111; }
+    header { background: #15803d; color: #fff; padding: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+    th, td { padding: 0.75rem; text-align: center; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f0fdf4; color: #166534; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .recommendation-row { background: #ecfdf5; display: none; }
+    .container { max-width: 1200px; margin: auto; padding: 1rem; }
   </style>
 </head>
 <body>
-  <h2>Nifty 50 Live Dashboard</h2>
-  <table id="stock-table">
-    <thead>
-      <tr>
-        <th>Symbol</th>
-        <th>Price</th>
-        <th>% Change</th>
-        <th>Previous Close</th>
-        <th>52W High</th>
-        <th>52W Low</th>
-        <th>PE Ratio</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="stock-body"></tbody>
-  </table>
+  <header>NSE Dashboard</header>
+  <div class="container">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Live Price</th>
+          <th>% Change</th>
+          <th>Prev Close</th>
+          <th>52W High</th>
+          <th>52W Low</th>
+          <th>PE Ratio</th>
+          <th>Analyst View</th>
+        </tr>
+      </thead>
+      <tbody id="stock-body"></tbody>
+    </table>
+  </div>
 
   <script>
-    async function fetchStocks() {
-      const res = await fetch('/api/nifty');
-      const data = await res.json();
+    let cachedMetrics = {};
+    let cachedRecos = {};
+
+    function toggleReco(symbol) {
+      const row = document.getElementById('reco-' + symbol);
+      if (row) row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+    }
+
+    async function loadStaticData() {
+      const [metrics, recos] = await Promise.all([
+        fetch('/api/metrics').then(res => res.json()),
+        fetch('/api/recommendations').then(res => res.json())
+      ]);
+      metrics.forEach(m => cachedMetrics[m.symbol] = m);
+      recos.forEach(r => cachedRecos[r.symbol] = r);
+    }
+
+    async function fetchLiveQuotes() {
+      const quotes = await fetch('/api/quote').then(res => res.json());
       const tbody = document.getElementById('stock-body');
       tbody.innerHTML = '';
 
-      data.forEach((stock, index) => {
+      quotes.forEach(stock => {
+        const symbol = stock.symbol;
+        const metric = cachedMetrics[symbol] || {};
+        const reco = cachedRecos[symbol] || {};
+
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${stock.symbol}</td>
-          <td>₹${stock.lastPrice?.toFixed(2)}</td>
-          <td>${stock.percentChange?.toFixed(2)}%</td>
-          <td>₹${stock.previousClose?.toFixed(2)}</td>
-          <td>₹${stock.weekHigh || '-'}</td>
-          <td>₹${stock.weekLow || '-'}</td>
-          <td>${stock.peRatio || '-'}</td>
-          <td><button class="expand-btn" onclick="toggleReco(${index})">🔽 View</button></td>
+          <td>${symbol}</td>
+          <td>${stock.lastPrice != null ? `₹${stock.lastPrice.toFixed(2)}` : '-'}</td>
+          <td>${stock.percentChange != null ? `${stock.percentChange.toFixed(2)}%` : '-'}</td>
+          <td>${stock.previousClose != null ? `₹${stock.previousClose.toFixed(2)}` : '-'}</td>
+          <td>${metric.weekHigh ?? '-'}</td>
+          <td>${metric.weekLow ?? '-'}</td>
+          <td>${metric.peRatio != null ? metric.peRatio.toFixed(2) : '-'}</td>
+          <td><button onclick="toggleReco('${symbol}')">🔽 View</button></td>
         `;
 
         const recoRow = document.createElement('tr');
         recoRow.className = 'recommendation-row';
-        recoRow.id = `reco-${index}`;
-        const reco = stock.recommendation || {};
+        recoRow.id = 'reco-' + symbol;
         recoRow.innerHTML = `
-          <td colspan="8">
-            🧠 Analyst Ratings:
-            <strong>Strong Buy:</strong> ${reco.strongBuy || 0} |
-            <strong>Buy:</strong> ${reco.buy || 0} |
-            <strong>Hold:</strong> ${reco.hold || 0} |
-            <strong>Sell:</strong> ${reco.sell || 0}
-          </td>
+          <td colspan="8">🧠 Strong Buy: ${reco.strongBuy ?? 0}, Buy: ${reco.buy ?? 0}, Hold: ${reco.hold ?? 0}, Sell: ${reco.sell ?? 0}</td>
         `;
 
         tbody.appendChild(row);
@@ -95,13 +87,11 @@
       });
     }
 
-    function toggleReco(index) {
-      const row = document.getElementById(`reco-${index}`);
-      row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
-    }
-
-    fetchStocks();
-    setInterval(fetchStocks, 120000); // Refresh every 2 min
+    (async () => {
+      await loadStaticData();
+      await fetchLiveQuotes();
+      setInterval(fetchLiveQuotes, 120000); // every 2 minutes
+    })();
   </script>
 </body>
 </html>
