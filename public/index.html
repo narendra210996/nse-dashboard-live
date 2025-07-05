@@ -20,13 +20,13 @@
     <button class="logout" onclick="window.location.href='/logout'">Logout</button>
   </header>
 
-  <div style="display: flex; justify-content: center; margin-top: 1rem;">
-    <div id="tab-us" class="tab active" onclick="switchTab('us')">📈 US Stocks</div>
-    <div id="tab-crypto" class="tab" onclick="switchTab('crypto')">🪙 Crypto (INR)</div>
+  <div class="tabs">
+    <button class="tab active">📈 US Stocks</button>
+    <button class="tab">🪙 Crypto (INR)</button>
   </div>
 
-  <!-- US Stocks Tab -->
-  <div id="us-stocks">
+  <!-- Stocks Tab -->
+  <div class="tab-content active" id="stocks-tab">
     <div class="container">
       <button class="download-btn" onclick="downloadExcel()">⬇ Download Excel</button>
       <table>
@@ -48,32 +48,27 @@
   </div>
 
   <!-- Crypto Tab -->
-  <div id="crypto-tab" style="display: none;">
+  <div class="tab-content" id="crypto-tab">
     <div class="grid" id="crypto-grid">
       <p>Loading data... please wait</p>
     </div>
   </div>
 
   <script>
-    function switchTab(tab) {
-      const usTab = document.getElementById("us-stocks");
-      const cryptoTab = document.getElementById("crypto-tab");
-      const usBtn = document.getElementById("tab-us");
-      const cryptoBtn = document.getElementById("tab-crypto");
+    // Tab Switching
+    const tabButtons = document.querySelectorAll(".tab");
+    const tabContents = document.querySelectorAll(".tab-content");
 
-      if (tab === "us") {
-        usTab.style.display = "block";
-        cryptoTab.style.display = "none";
-        usBtn.classList.add("active");
-        cryptoBtn.classList.remove("active");
-      } else {
-        usTab.style.display = "none";
-        cryptoTab.style.display = "block";
-        cryptoBtn.classList.add("active");
-        usBtn.classList.remove("active");
-      }
-    }
+    tabButtons.forEach((btn, idx) => {
+      btn.addEventListener("click", () => {
+        tabButtons.forEach(b => b.classList.remove("active"));
+        tabContents.forEach(tc => tc.classList.remove("active"));
+        btn.classList.add("active");
+        tabContents[idx].classList.add("active");
+      });
+    });
 
+    // Excel Download
     function downloadExcel() {
       const table = document.querySelector("table");
       let csv = [];
@@ -93,6 +88,7 @@
       document.body.removeChild(a);
     }
 
+    // Load Static Stock Info
     let cachedMetrics = {}, cachedRecos = {};
     async function loadStaticData() {
       const [metrics, recos] = await Promise.all([
@@ -103,6 +99,7 @@
       recos.forEach(r => cachedRecos[r.symbol] = r);
     }
 
+    // Load Stock Prices
     async function fetchLiveQuotes() {
       const quotes = await fetch('/api/quote').then(res => res.json());
       const tbody = document.getElementById('stock-body');
@@ -141,30 +138,37 @@
       if (row) row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
     }
 
+    // Stable Crypto WebSocket
     const ws = new WebSocket("wss://stream.binance.com:9443/ws/!miniTicker@arr");
+    const cryptoMap = new Map();
+
     ws.onmessage = function (event) {
       const data = JSON.parse(event.data);
-      const top50 = data.slice(0, 50);
       const container = document.getElementById("crypto-grid");
-      container.innerHTML = "";
 
-      top50.forEach(tick => {
+      data.slice(0, 50).forEach(tick => {
         const symbol = tick.s;
         const price = parseFloat(tick.c);
         const inr = (price * 83).toLocaleString("en-IN", { style: "currency", currency: "INR" });
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<strong>${symbol}</strong><span>${inr}</span>`;
-        container.appendChild(card);
+
+        if (cryptoMap.has(symbol)) {
+          cryptoMap.get(symbol).querySelector("span").textContent = inr;
+        } else {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `<strong>${symbol}</strong><br><span>${inr}</span>`;
+          cryptoMap.set(symbol, card);
+          container.appendChild(card);
+        }
       });
     };
 
+    // Init
     (async () => {
       await loadStaticData();
       await fetchLiveQuotes();
       setTimeout(() => document.getElementById('loader').style.display = 'none', 30000);
       setInterval(fetchLiveQuotes, 120000);
-      switchTab("us");
     })();
   </script>
 </body>
