@@ -3,122 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>US Market Dashboard</title>
-  <style>
-    body { font-family: sans-serif; margin: 0; background: #f3f4f6; color: #111; }
-    header { background: #15803d; color: #fff; padding: 1rem; text-align: center; font-size: 1.5rem; font-weight: bold; position: relative; }
-    .logout {
-      position: absolute;
-      right: 20px;
-      top: 1.2rem;
-      background: #166534;
-      color: white;
-      padding: 0.4rem 0.8rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .download-btn {
-      margin: 1rem auto;
-      display: block;
-      background: #15803d;
-      color: white;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
-    th, td { padding: 0.75rem; text-align: center; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f0fdf4; color: #166534; }
-    tr:nth-child(even) { background: #f9fafb; }
-    .recommendation-row { background: #ecfdf5; display: none; }
-    .container { max-width: 1200px; margin: auto; padding: 1rem; }
-
-    /* Loader styles */
-    #loader {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255, 255, 255, 0.95);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-
-    .loader-box {
-      text-align: center;
-      color: #166534;
-      font-family: sans-serif;
-    }
-
-    .loader-box p {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-      animation: pulse 1.5s infinite;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 5px solid #cbd5e1;
-      border-top: 5px solid #15803d;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
-    }
-  </style>
+  <title>NSE Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Loader -->
   <div id="loader">
     <div class="loader-box">
       <div class="spinner"></div>
-      <p>Fetching live stock data... please wait</p>
+      <p>Fetching live data... please wait</p>
     </div>
   </div>
 
   <header>
-    US Market Dashboard
+    NSE Dashboard
     <button class="logout" onclick="window.location.href='/logout'">Logout</button>
   </header>
-  <div class="container">
-    <button class="download-btn" onclick="downloadExcel()">⬇ Download Excel</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Live Price</th>
-          <th>% Change</th>
-          <th>Prev Close</th>
-          <th>52W High</th>
-          <th>52W Low</th>
-          <th>PE Ratio</th>
-          <th>Analyst View</th>
-        </tr>
-      </thead>
-      <tbody id="stock-body"></tbody>
-    </table>
-  </div>
-  <script>
-    let cachedMetrics = {};
-    let cachedRecos = {};
 
-    function toggleReco(symbol) {
-      const row = document.getElementById('reco-' + symbol);
-      if (row) row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+  <div style="display: flex; justify-content: center; margin-top: 1rem;">
+    <div id="tab-us" class="tab active" onclick="switchTab('us')">📈 US Stocks</div>
+    <div id="tab-crypto" class="tab" onclick="switchTab('crypto')">🪙 Crypto (INR)</div>
+  </div>
+
+  <!-- US Stocks Tab -->
+  <div id="us-stocks">
+    <div class="container">
+      <button class="download-btn" onclick="downloadExcel()">⬇ Download Excel</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Live Price</th>
+            <th>% Change</th>
+            <th>Prev Close</th>
+            <th>52W High</th>
+            <th>52W Low</th>
+            <th>PE Ratio</th>
+            <th>Analyst View</th>
+          </tr>
+        </thead>
+        <tbody id="stock-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Crypto Tab -->
+  <div id="crypto-tab" style="display: none;">
+    <div class="grid" id="crypto-grid">
+      <p>Loading data... please wait</p>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      const usTab = document.getElementById("us-stocks");
+      const cryptoTab = document.getElementById("crypto-tab");
+      const usBtn = document.getElementById("tab-us");
+      const cryptoBtn = document.getElementById("tab-crypto");
+
+      if (tab === "us") {
+        usTab.style.display = "block";
+        cryptoTab.style.display = "none";
+        usBtn.classList.add("active");
+        cryptoBtn.classList.remove("active");
+      } else {
+        usTab.style.display = "none";
+        cryptoTab.style.display = "block";
+        cryptoBtn.classList.add("active");
+        usBtn.classList.remove("active");
+      }
     }
 
     function downloadExcel() {
@@ -140,6 +93,7 @@
       document.body.removeChild(a);
     }
 
+    let cachedMetrics = {}, cachedRecos = {};
     async function loadStaticData() {
       const [metrics, recos] = await Promise.all([
         fetch('/api/metrics').then(res => res.json()),
@@ -153,12 +107,10 @@
       const quotes = await fetch('/api/quote').then(res => res.json());
       const tbody = document.getElementById('stock-body');
       tbody.innerHTML = '';
-
       quotes.forEach(stock => {
         const symbol = stock.symbol;
         const metric = cachedMetrics[symbol] || {};
         const reco = cachedRecos[symbol] || {};
-
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${symbol}</td>
@@ -181,22 +133,38 @@
         tbody.appendChild(row);
         tbody.appendChild(recoRow);
       });
-
-      // ✅ Hide loader after data loads
       document.getElementById('loader').style.display = 'none';
     }
+
+    function toggleReco(symbol) {
+      const row = document.getElementById('reco-' + symbol);
+      if (row) row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
+    }
+
+    const ws = new WebSocket("wss://stream.binance.com:9443/ws/!miniTicker@arr");
+    ws.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+      const top50 = data.slice(0, 50);
+      const container = document.getElementById("crypto-grid");
+      container.innerHTML = "";
+
+      top50.forEach(tick => {
+        const symbol = tick.s;
+        const price = parseFloat(tick.c);
+        const inr = (price * 83).toLocaleString("en-IN", { style: "currency", currency: "INR" });
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `<strong>${symbol}</strong><span>${inr}</span>`;
+        container.appendChild(card);
+      });
+    };
 
     (async () => {
       await loadStaticData();
       await fetchLiveQuotes();
-
-      // ⏱ Auto-dismiss loader after 30 seconds in case of delay
-      setTimeout(() => {
-        const loader = document.getElementById('loader');
-        if (loader) loader.style.display = 'none';
-      }, 30000);
-
-      setInterval(fetchLiveQuotes, 120000); // every 2 min
+      setTimeout(() => document.getElementById('loader').style.display = 'none', 30000);
+      setInterval(fetchLiveQuotes, 120000);
+      switchTab("us");
     })();
   </script>
 </body>
