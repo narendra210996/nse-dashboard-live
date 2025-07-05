@@ -49,13 +49,10 @@
 
   <!-- Crypto Tab -->
   <div class="tab-content" id="crypto-tab">
-    <div class="grid" id="crypto-grid">
-      <p>Loading data... please wait</p>
-    </div>
+    <div class="grid" id="crypto-grid"></div>
   </div>
 
   <script>
-    // Tab Switching
     const tabButtons = document.querySelectorAll(".tab");
     const tabContents = document.querySelectorAll(".tab-content");
 
@@ -68,7 +65,6 @@
       });
     });
 
-    // Excel Download
     function downloadExcel() {
       const table = document.querySelector("table");
       let csv = [];
@@ -88,7 +84,6 @@
       document.body.removeChild(a);
     }
 
-    // Load Static Stock Info
     let cachedMetrics = {}, cachedRecos = {};
     async function loadStaticData() {
       const [metrics, recos] = await Promise.all([
@@ -99,15 +94,16 @@
       recos.forEach(r => cachedRecos[r.symbol] = r);
     }
 
-    // Load Stock Prices
     async function fetchLiveQuotes() {
       const quotes = await fetch('/api/quote').then(res => res.json());
       const tbody = document.getElementById('stock-body');
       tbody.innerHTML = '';
+
       quotes.forEach(stock => {
         const symbol = stock.symbol;
         const metric = cachedMetrics[symbol] || {};
         const reco = cachedRecos[symbol] || {};
+
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${symbol}</td>
@@ -123,6 +119,7 @@
         const recoRow = document.createElement('tr');
         recoRow.className = 'recommendation-row';
         recoRow.id = 'reco-' + symbol;
+        recoRow.style.display = 'none';
         recoRow.innerHTML = `
           <td colspan="8">🧠 Strong Buy: ${reco.strongBuy ?? 0}, Buy: ${reco.buy ?? 0}, Hold: ${reco.hold ?? 0}, Sell: ${reco.sell ?? 0}</td>
         `;
@@ -130,6 +127,7 @@
         tbody.appendChild(row);
         tbody.appendChild(recoRow);
       });
+
       document.getElementById('loader').style.display = 'none';
     }
 
@@ -138,32 +136,36 @@
       if (row) row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
     }
 
-    // Stable Crypto WebSocket
     const ws = new WebSocket("wss://stream.binance.com:9443/ws/!miniTicker@arr");
-    const cryptoMap = new Map();
+    const container = document.getElementById("crypto-grid");
+    const order = [
+      "BTCUSDT", "ETHUSDT", "USDTUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "TONUSDT", "ADAUSDT", "AVAXUSDT",
+      "SHIBUSDT", "WBTCUSDT", "DOTUSDT", "TRXUSDT", "LINKUSDT", "MATICUSDT", "BCHUSDT", "LTCUSDT", "ICPUSDT", "UNIUSDT",
+      "LEOUSDT", "NEARUSDT", "XLMUSDT", "APTUSDT", "XMRUSDT", "ETCUSDT", "CROUSDT", "RNDRUSDT", "STXUSDT", "ARBUSDT",
+      "OPUSDT", "FILUSDT", "HBARUSDT", "VETUSDT", "MKRUSDT", "GRTUSDT", "TUSDUSDT", "INJUSDT", "PEPEUSDT", "EGLDUSDT",
+      "QNTUSDT", "THETAUSDT", "FTMUSDT", "SANDUSDT", "AXSUSDT", "MANAUSDT", "XTZUSDT", "AAVEUSDT", "EOSUSDT", "FLOWUSDT"
+    ];
+    const priceMap = {};
+
+    order.forEach(symbol => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<strong>${symbol}</strong><br><span id="${symbol}-price">Loading...</span>`;
+      container.appendChild(card);
+      priceMap[symbol] = document.getElementById(`${symbol}-price`);
+    });
 
     ws.onmessage = function (event) {
       const data = JSON.parse(event.data);
-      const container = document.getElementById("crypto-grid");
-
-      data.slice(0, 50).forEach(tick => {
+      data.forEach(tick => {
         const symbol = tick.s;
+        if (!priceMap[symbol]) return;
         const price = parseFloat(tick.c);
         const inr = (price * 83).toLocaleString("en-IN", { style: "currency", currency: "INR" });
-
-        if (cryptoMap.has(symbol)) {
-          cryptoMap.get(symbol).querySelector("span").textContent = inr;
-        } else {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `<strong>${symbol}</strong><br><span>${inr}</span>`;
-          cryptoMap.set(symbol, card);
-          container.appendChild(card);
-        }
+        priceMap[symbol].textContent = inr;
       });
     };
 
-    // Init
     (async () => {
       await loadStaticData();
       await fetchLiveQuotes();
